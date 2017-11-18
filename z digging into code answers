@@ -1,0 +1,36 @@
+1)
+The function server_connection_init(), implemented in babble_server_implem.c. Called line 219 in server.c
+
+2)
+The function server_connection_accept(), implemented in babble_server_implem.c. Called line 228 in server.c. For now, only one at a time. (finished one iteration of while loop when no more commands to process, then accepts a new client). (+ all of the code until the while loop for processing commands handles login / registration...)
+
+3)
+New command struct is created to store it. message is parsed into a command. 
+Command is processed. An anwser is issued back to the client.
+
+4) 
+With a LOGIN message, we don't yet know to which client we should associate it.
+
+5) 
+It keeps track of the registered clients (and their relevant information, messages, key, name, socket...)
+SHARED DATA HERE :D
+
+6)
+Keys are used to identify the clients instead of their ID (because that can contain characters so is a pain to manipulate).
+
+7)
+we wait for the command to be processed, and then run anwer-command. This might do nothing, send and anwser, or send multiple answers if TIMELINE.
+
+
+8)
+Get info relevant to the command from the registration table, access the message containting the id of the client we want to follow.
+MOAR SHARED STUFF :D
+Get the corresponding key, add the key value to our array of followed clients.
+
+9)
+Lookup keys of followed clients. For each of them, get the new publications (older than the previous call to TIMELINE, and up to current TIMELINE call time.
+
+10)
+network_send and network_recv (in babble_communication.h).
+return values are the total number of bytes actually sent, and size of buffer allocated to store the data.
+(or -1 on error)
