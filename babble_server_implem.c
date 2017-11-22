@@ -204,6 +204,8 @@ int run_login_command(command_t *cmd)
     client_data->nb_followed=1;
     client_data->nb_followers=1;
 
+//PRIOR TO THIS REGISTRATION: we shouldn't need to protect client struct 
+//since the only way it'll be seen by other threads is whfound in reg table
     if(registration_insert(client_data)){
         free(client_data->pub_set);
         free(client_data);

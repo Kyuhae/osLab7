@@ -18,39 +18,33 @@ void registration_init(void)
 
 client_bundle_t* registration_lookup(unsigned long key)
 {
+	client_bundle_t *tmp = NULL;
 	pthread_rwlock_rdlock(&regTableLock);
     int i=0;
     
     for(i=0; i< nb_registered_clients; i++){
         if(registration_table[i]->key == key){
-			client_bundle_t *tmp = registration_table[i];
-			pthread_rwlock_unlock(&regTableLock);
-            return tmp;
+			tmp = registration_table[i];
         }
     }
 	pthread_rwlock_unlock(&regTableLock);
-    return NULL;
+    return tmp;
 }
 
 int registration_insert(client_bundle_t* cl)
 {   
-	pthread_rwlock_rdlock(&regTableLock); 
-    if(nb_registered_clients == MAX_CLIENT){
-		pthread_rwlock_unlock(&regTableLock);
-        return -1;
-    }
-    
     /* lookup to find if key already exists*/
-    pthread_rwlock_unlock(&regTableLock);
     client_bundle_t* lp= registration_lookup(cl->key);
     if(lp != NULL){
         fprintf(stderr, "Error -- id % ld already in use\n", cl->key);
-        pthread_rwlock_unlock(&regTableLock);
         return -1;
     }
 
     /* insert cl */
     pthread_rwlock_wrlock(&regTableLock); 
+    if(nb_registered_clients == MAX_CLIENT){
+        return -1;
+    }
     registration_table[nb_registered_clients]=cl;
     nb_registered_clients++;
 	pthread_rwlock_unlock(&regTableLock);

@@ -19,7 +19,6 @@
 #include "babble_utils.h"
 #include "babble_communication.h"
 
-#define MAX_NB_THREADS 100
 #define MAX_NB_CMD 10
 
 //SYNCH
@@ -189,7 +188,7 @@ static int answer_command(command_t *cmd)
 //-----------------------   PRODUCER / CONSUMER  --------------------------//
 typedef struct syncBufferS {
 	sem_t produceable, consumeable;
-	pthread_mutex_t mutex;;
+	pthread_mutex_t mutex;
 	int count;
 	command_t *buf[MAX_NB_CMD];
 } syncBuffer;
@@ -214,31 +213,7 @@ void syncBuffer_put(syncBuffer *sBuf, command_t *cmd) {
     pthread_mutex_lock(&(sBuf->mutex));
     
     sBuf->count++; 
-    //TODO: implement copy from cmd to the new command
     sBuf->buf[sBuf->count - 1] = cmd;
-    //memcpy(sBuf->buf[sBuf->count - 1], cmd, sizeof(struct command));
-    //memcpy(sBuf->buf[sBuf->count - 1]->anwser, cmd->answer, sizeof(struct answer));
-    /*sBuf->buf[sBuf->count - 1] = new_command(cmd->key);
-    sBuf->buf[sBuf->count - 1]->cid = cmd->cid;
-    sBuf->buf[sBuf->count - 1]->sock = 0;
-    sBuf->buf[sBuf->count - 1]->key = cmd->key;
-    strncpy(sBuf->buf[sBuf->count - 1]->msg, cmd->msg, BABBLE_ID_SIZE);*/
-    
-
-    
-    
-    /*
-     *     command_id cid;
-    int sock;    /only needed by the LOGIN command, other commands
-                  *will use the key
-    unsigned long key;
-    char msg[BABBLE_SIZE];
-    answer_set_t answer; /once the cmd has been processed, answer
-                            to client is stored there 
-    int answer_expected;    answer sent only if set 
-    //copy stuff here
-    * 
-    * */
     printf("pushing command for client key %lu\n",cmd->key);
     
     pthread_mutex_unlock(&(sBuf->mutex));
@@ -269,8 +244,9 @@ void* communicationT(void *data) {
 	//copy input parameter
 	int newsockfd = (*(int*)data);
 	char client_name[BABBLE_ID_SIZE+1];
-		//we're done copying, signal main so it can create another commThread
+	//we're done copying, signal main so it can create another commThread
 	sem_post(&comThreadSetup);
+
 	
 	//process login command
 	bzero(client_name, BABBLE_ID_SIZE+1);
@@ -322,15 +298,6 @@ void* communicationT(void *data) {
 		}
 		//put command into command_buffer
 		syncBuffer_put(command_buffer, cmd);
-		/* NOPE, now the executor will do this
-		 * else{
-			if(process_command(cmd) == -1){
-				fprintf(stderr, "Warning: unable to process command from client %lu\n", client_key);
-			}
-			if(answer_command(cmd) == -1){
-				fprintf(stderr, "Warning: unable to answer command from client %lu\n", client_key);
-			}
-		}*/
 	}
 	printf("client_name = %s\n",client_name);
 	if(client_name[0] != 0){
@@ -350,11 +317,7 @@ void* executorT(void *data) {
 	syncBuffer *command_buffer = (syncBuffer *)(data);
 	command_t *cmd;
 	while(1) {
-		//wait for there to be something in buffer
-		//grab cmd from buffer
-		cmd = syncBuffer_get(command_buffer);
-		// !need to implement R/W lock on registration table
-		
+		cmd = syncBuffer_get(command_buffer);		
 		if(process_command(cmd) == -1){
 			fprintf(stderr, "Warning: unable to process command from client %lu\n", cmd->key);
 		}
@@ -430,6 +393,7 @@ int main(int argc, char *argv[])
         }
 		//CREATE COMMS THREAD HERE  (if there are already max num then wait for one to end);
 		sem_wait(&comThreadLimit);
+		// Wrong.
 		pthread_create (&comTids[(comInd % BABBLE_COMMUNICATION_THREADS)-1], NULL, communicationT, &newsockfd) ;
 		comInd++;
 		

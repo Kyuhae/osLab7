@@ -40,6 +40,7 @@ typedef struct command{
     answer_set_t answer; /* once the cmd has been processed, answer
                            * to client is stored there */
     int answer_expected;   /* answer sent only if set */
+    //add a timestamp here :D
 } command_t;
 
 typedef struct client_bundle{

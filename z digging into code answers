@@ -34,3 +34,26 @@ Lookup keys of followed clients. For each of them, get the new publications (old
 network_send and network_recv (in babble_communication.h).
 return values are the total number of bytes actually sent, and size of buffer allocated to store the data.
 (or -1 on error)
+
+
+
+timeline gets new posts erry'body i follow
+
+IMPORTANTE
+Yup need locks on each client.
+Might not need to protect as many accesses as we think. 
+
+how to join threads?
+
+ORDERING: login and RDV. others can be run whenever
+
+list of RDV counters (locked);
+start with one rdv_node, with no timestam, pointer set to it, increment it's counter
+when get new rdv, create the timestamp in current node, THEN create new node, and in future, use it's counter (set ptr to it)
+CommThread: when i have a publish, increment rdv counter[nbRDV]
+Execthread: when i process a PUBlish, decrement the RDV counter s.t RDV node is first node with bigger timestamp than publish timestamp
+to do this, we need timestamp in command struct + timestamp in RDV_list_node; which are set by commThread
+
+RDV_list_node:
+	nb PUBS
+	RDV_requested time
