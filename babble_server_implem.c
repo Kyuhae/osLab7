@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 
 #include "babble_server.h"
@@ -158,8 +159,10 @@ int server_connection_accept(int sock)
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
 
+	printf("before new sock (smelly)\n");
     new_sock = accept(sock, (struct sockaddr *) &cli_addr, &clilen);
-    
+    printf("after new sock (clean)\n");
+
     if (new_sock < 0){
         perror("ERROR on accept");
         close(sock);
@@ -203,6 +206,8 @@ int run_login_command(command_t *cmd)
     client_data->followed[0]=client_data;
     client_data->nb_followed=1;
     client_data->nb_followers=1;
+    pthread_mutex_init(&(client_data->lock), NULL);
+
 
 //PRIOR TO THIS REGISTRATION: we shouldn't need to protect client struct 
 //since the only way it'll be seen by other threads is whfound in reg table
@@ -234,9 +239,10 @@ int run_publish_command(command_t *cmd)
         generate_cmd_error(cmd);
         return -1;
     }
-    
+    pthread_mutex_lock(&(client->lock));
     publication_t *pub = publication_set_insert(client->pub_set, cmd->msg);
-    
+    pthread_mutex_unlock(&(client->lock));
+
     printf("### Client %s published { %s } at date %ld\n", client->client_name, pub->msg, pub->date);
 
     /* answer to client */
@@ -270,9 +276,9 @@ int run_follow_command(command_t *cmd)
         return 0;
     }
     
+    pthread_mutex_lock(&(client->lock));
     /* if client is not already followed, add it*/
     int i=0;
-
     for(i=0; i<client->nb_followed; i++){
         if(client->followed[i]->key == f_key){
             break;
@@ -282,8 +288,12 @@ int run_follow_command(command_t *cmd)
     if(i == client->nb_followed){
         client->followed[i]=f_client;
         client->nb_followed++;
+        pthread_mutex_lock(&(f_client->lock));
         f_client->nb_followers++;
+        pthread_mutex_unlock(&(f_client->lock));
     }
+    pthread_mutex_unlock(&(client->lock));
+
 
     
     /* answer to client */
@@ -320,6 +330,7 @@ int run_timeline_command(command_t *cmd)
     /* start from where we finished last time*/
     uint64_t start_time=client->last_timeline;
     
+    pthread_mutex_lock(&(client->lock));
     /* gather publications over all followed clients */
     for(i=0; i < client->nb_followed; i++){
         client_bundle_t *f_client=client->followed[i];
@@ -327,6 +338,14 @@ int run_timeline_command(command_t *cmd)
 
         timeline_item_t *time_iter=pub_list, *prev;
         /* add recent items to the totally ordered list */
+        //printf("timeline before while locking\n");
+        if (f_client == client) {
+			//printf("follow client is equal to client\n");
+		}
+		else {
+			pthread_mutex_lock(&(f_client->lock));
+        }
+        //printf("timeline before while locked\n");
         while((pub = publication_set_getnext(f_client->pub_set, pub, start_time)) != NULL){
             /* if publication is more recent than the timeline
                command, we do not consider it */
@@ -356,7 +375,11 @@ int run_timeline_command(command_t *cmd)
             item_count++;
             time_iter = item;
         }
+        pthread_mutex_unlock(&(f_client->lock));
+
     }
+    pthread_mutex_unlock(&(client->lock));
+
 
 
     /* now that we have a full timeline, we generate the messages to
@@ -384,8 +407,10 @@ int run_timeline_command(command_t *cmd)
     
         time_iter = time_iter->next;
     }
-
+    
+    pthread_mutex_lock(&(client->lock));
     client->last_timeline = end_time;
+    pthread_mutex_unlock(&(client->lock));
     
     return 0;
 }
@@ -441,9 +466,9 @@ int unregisted_client(command_t *cmd)
 
     if(client != NULL){
         printf("### Unregister client %s (key = %lu)\n", client->client_name, client->key);
+        pthread_mutex_lock(&(client->lock));
         close(client->sock);
-     
-        
+        pthread_mutex_unlock(&(client->lock));
         free_client_data(client);
     }
     
@@ -488,9 +513,10 @@ int write_to_client(unsigned long key, int size, void* buf)
         fprintf(stderr, "Error -- writing to non existing client %lu\n", key);
         return -1;
     }
-    
+    pthread_mutex_lock(&(client->lock));
     int write_size = network_send(client->sock, size, buf);
-            
+    pthread_mutex_unlock(&(client->lock));
+        
     if (write_size < 0){
         perror("writing to socket");
         return -1;

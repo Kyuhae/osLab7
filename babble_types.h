@@ -2,6 +2,7 @@
 #define __BABBLE_TYPES_H__
 
 #include <time.h>
+#include <pthread.h>
 
 #include "babble_config.h"
 #include "babble_publication_set.h"
@@ -59,6 +60,7 @@ typedef struct client_bundle{
     uint64_t last_timeline;   /* stored to display only *new* messages
                                * */
     int nb_followers;
+	pthread_mutex_t lock;
 } client_bundle_t;
 
 

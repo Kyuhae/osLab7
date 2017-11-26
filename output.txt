@@ -1,0 +1,13 @@
+0: TIM got a timeline of size 2
+1: TIM got a timeline of size 0
+2: TIM got a timeline of size 2
+3: TIM got a timeline of size 1
+4: TIM got a timeline of size 0
+5: TIM got a timeline of size 2
+6: TIM got a timeline of size 1
+7: TIM got a timeline of size 1
+8: TIM got a timeline of size 1
+9: TIM got a timeline of size 1
+PUB stops publishing
+10: TIM got a timeline of size 0
+**** SUCCESS ****
