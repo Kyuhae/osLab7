@@ -23,8 +23,7 @@
 
 //SYNCH
 sem_t comThreadSetup;
-    
-    
+
 static void display_help(char *exec)
 {
     printf("Usage: %s -p port_number\n", exec);
@@ -239,11 +238,11 @@ command_t * syncBuffer_get(syncBuffer *sBuf) {
 void* communicationT(void *data) {
 	unsigned long client_key=0;
 	char* recv_buff=NULL;
+	char client_name[BABBLE_ID_SIZE+1];
 	int recv_size=0;
 	
 	//copy input parameter
 	int newsockfd = (*(int*)data);
-	char client_name[BABBLE_ID_SIZE+1];
 	//we're done copying, signal main so it can create another commThread
 	sem_post(&comThreadSetup);
 
@@ -340,8 +339,7 @@ int main(int argc, char *argv[])
 	
     //VARS MOVED TO GLOBAL AT TOP OF FILE
     
-    pthread_t *comTids = malloc(BABBLE_COMMUNICATION_THREADS * sizeof(pthread_t));
-    pthread_t exeTid;
+    pthread_t comTid, exeTid;
     int comInd = 0;
     
     //SYNCH
@@ -376,9 +374,9 @@ int main(int argc, char *argv[])
     printf("Babble server bound to port %d\n", portno);   
     
 	//CREATE EXECUTOR THREAD HERE 
-	pthread_create(&exeTid, NULL, executorT, command_buffer) ;
-		
-		
+	pthread_create(&exeTid, NULL, executorT, command_buffer);
+	pthread_detach(exeTid);
+
 		
     /* main server loop */
     while(1){
@@ -387,8 +385,10 @@ int main(int argc, char *argv[])
         if((newsockfd= server_connection_accept(sockfd))==-1){
             return -1;
         }
-		pthread_create (&comTids[(comInd % BABBLE_COMMUNICATION_THREADS)-1], NULL, communicationT, &newsockfd) ;
+		pthread_create (&comTid, NULL, communicationT, &newsockfd);
+		pthread_detach(comTid);
 		comInd++;
+		
 		
     }
     close(sockfd);

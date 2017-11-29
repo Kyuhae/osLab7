@@ -159,9 +159,7 @@ int server_connection_accept(int sock)
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
 
-	printf("before new sock (smelly)\n");
     new_sock = accept(sock, (struct sockaddr *) &cli_addr, &clilen);
-    printf("after new sock (clean)\n");
 
     if (new_sock < 0){
         perror("ERROR on accept");
